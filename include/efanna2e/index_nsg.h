@@ -11,6 +11,7 @@
 #include <sstream>
 #include <boost/dynamic_bitset.hpp>
 #include <stack>
+#include "oneapi/dnnl/dnnl.hpp"
 
 namespace efanna2e {
 
@@ -79,6 +80,8 @@ class IndexNSG : public Index {
     size_t data_len;
     size_t neighbor_len;
     KNNGraph nnd_graph;
+    dnnl::engine engine;
+    dnnl::stream stream;
 };
 }
 

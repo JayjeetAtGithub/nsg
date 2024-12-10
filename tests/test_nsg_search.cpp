@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
   // data_load = efanna2e::data_align(data_load, points_num, dim);//one must
   // align the data before build query_load = efanna2e::data_align(query_load,
   // query_num, query_dim);
-  efanna2e::IndexNSG index(dim, points_num, efanna2e::L2, nullptr);
+  efanna2e::IndexNSG index(dim, points_num, efanna2e::INNER_PRODUCT, nullptr);
   index.Load(argv[3]);
 
   efanna2e::Parameters paras;
@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 
   auto s = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<unsigned> > res;
-  for (unsigned i = 0; i < query_num; i++) {
+  for (unsigned i = 0; i < 10000; i++) {
     std::vector<unsigned> tmp(K);
     index.Search(query_load + i * dim, data_load, K, paras, tmp.data());
     res.push_back(tmp);

@@ -8,12 +8,19 @@
 
 #include "efanna2e/exceptions.h"
 #include "efanna2e/parameters.h"
+#include "distance.hpp"
 
 namespace efanna2e {
 #define _CONTROL_NUM 100
 IndexNSG::IndexNSG(const size_t dimension, const size_t n, Metric m,
                    Index *initializer)
-    : Index(dimension, n, m), initializer_{initializer} {}
+    : Index(dimension, n, m), initializer_{initializer} {
+      engine = dnnl::engine(dnnl::engine::kind::cpu, 0);
+      stream = dnnl::stream(engine);
+      if (!avs::is_amxbf16_supported()) {
+        std::cout << "Intel AMX unavailable" << std::endl;
+      }
+    }
 
 IndexNSG::~IndexNSG() {
     if (distance_ != nullptr) {
@@ -439,6 +446,8 @@ void IndexNSG::Build(size_t n, const float *data, const Parameters &parameters) 
   delete cut_graph_;
 }
 
+// query: a batch of query vectors
+// x: a batch of data vectors
 void IndexNSG::Search(const float *query, const float *x, size_t K,
                       const Parameters &parameters, unsigned *indices) {
   const unsigned L = parameters.Get<unsigned>("L_search");
@@ -463,10 +472,19 @@ void IndexNSG::Search(const float *query, const float *x, size_t K,
     tmp_l++;
   }
 
+  std::vector<float> selected_points(init_ids.size() * dimension_);
   for (unsigned i = 0; i < init_ids.size(); i++) {
     unsigned id = init_ids[i];
-    float dist =
-        distance_->compare(data_ + dimension_ * id, query, (unsigned)dimension_);
+    memcpy(selected_points.data() + i * dimension_,
+           data_ + id * dimension_, dimension_ * sizeof(float));
+  }
+
+  auto res = avs::ip_distance_amx(
+    query, selected_points.data(), 1, init_ids.size(), dimension_, engine, stream);
+
+  for (unsigned i = 0; i < init_ids.size(); i++) {
+    unsigned id = init_ids[i];
+    float dist = res[0][i];
     retset[i] = Neighbor(id, dist, true);
     // flags[id] = true;
   }
