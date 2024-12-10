@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 
   auto s = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<unsigned> > res;
-  for (unsigned i = 0; i < 1; i++) {
+  for (unsigned i = 0; i < 100; i++) {
     std::vector<unsigned> tmp(K);
     index.Search(query_load + i * dim, data_load, K, paras, tmp.data());
     res.push_back(tmp);
