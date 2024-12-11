@@ -169,6 +169,14 @@ static matf32_t amx_inner_product(int32_t const &n, int32_t const &oc,
   return result;
 }
 
+void print_vector(const float *data, std::string prefix) {
+  std::cout << prefix << " :";
+  for (unsigned i = 0; i < 10; i++) {
+    std::cout << data[i] << " ";
+  }
+  std::cout << std::endl;
+}
+
 static avs::matf32_t ip_distance_amx(const float* queries,
                                      const float* data,
                                      int32_t queries_size,

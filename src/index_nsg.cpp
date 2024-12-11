@@ -116,6 +116,7 @@ void IndexNSG::get_neighbors(const float *query, const Parameters &parameter,
   }
 
   L = 0;
+
   for (unsigned i = 0; i < init_ids.size(); i++) {
     unsigned id = init_ids[i];
     if (id >= nd_) continue;
@@ -472,22 +473,63 @@ void IndexNSG::Search(const float *query, const float *x, size_t K,
     tmp_l++;
   }
 
+  std::vector<float> a, b;
+
+  // avs::print_vector(query, "amx_query");
+  auto s = std::chrono::high_resolution_clock::now();
   std::vector<float> selected_points(init_ids.size() * dimension_);
   for (unsigned i = 0; i < init_ids.size(); i++) {
     unsigned id = init_ids[i];
+    // avs::print_vector(data_ + id * dimension_, "amx");
     memcpy(selected_points.data() + i * dimension_,
            data_ + id * dimension_, dimension_ * sizeof(float));
   }
+  auto e = std::chrono::high_resolution_clock::now();
+  auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(e - s).count();
+  std::cout << "amx copy time: " << microseconds << "\n";
 
+  s = std::chrono::high_resolution_clock::now();
   auto res = avs::ip_distance_amx(
     query, selected_points.data(), 1, init_ids.size(), dimension_, engine, stream);
+  e = std::chrono::high_resolution_clock::now();
+  microseconds = std::chrono::duration_cast<std::chrono::microseconds>(e - s).count();
+  std::cout << "amx search time: " << microseconds << "\n";
 
   for (unsigned i = 0; i < init_ids.size(); i++) {
     unsigned id = init_ids[i];
     float dist = res[0][i];
+    a.push_back(dist);
     retset[i] = Neighbor(id, dist, true);
     // flags[id] = true;
   }
+  // ----------------------------------------------------------------
+  // avs::print_vector(query, "vanilla_query");
+  s = std::chrono::high_resolution_clock::now();
+  for (unsigned i = 0; i < init_ids.size(); i++) {
+    unsigned id = init_ids[i];
+    // avs::print_vector(data_ + id * dimension_, "vanilla");
+    // float dist =
+    //     distance_->compare(data_ + dimension_ * id, query, (unsigned)dimension_);
+    float dist = avs::InnerProductAVX512(query, data_ + id * dimension_, dimension_);
+    b.push_back(dist);
+    retset[i] = Neighbor(id, dist, true);
+    // flags[id] = true;
+  }
+  e = std::chrono::high_resolution_clock::now();
+  microseconds = std::chrono::duration_cast<std::chrono::microseconds>(e - s).count();
+  std::cout << "avx512 search time: " << microseconds << "\n";
+  // ----------------------------------------------------------------
+
+  // verify
+  // if (a.size() != b.size()) {
+  //   std::cout << "error res size: " << a.size() << " " << b.size() << "\n";
+  // }
+  // for (int i = 0; i < a.size(); i++) {
+  //   if (fabs(a[i] - b[i]) != 0.0f) {
+  //     std::cout << "error dis val: " << a[i] << " " << b[i] << "\n";
+  //   }
+  // }
+  // verify
 
   std::sort(retset.begin(), retset.begin() + L);
   int k = 0;

@@ -73,14 +73,14 @@ int main(int argc, char** argv) {
 
   auto s = std::chrono::high_resolution_clock::now();
   std::vector<std::vector<unsigned> > res;
-  for (unsigned i = 0; i < 100; i++) {
+  for (unsigned i = 0; i < 200; i++) {
     std::vector<unsigned> tmp(K);
     index.Search(query_load + i * dim, data_load, K, paras, tmp.data());
     res.push_back(tmp);
   }
   auto e = std::chrono::high_resolution_clock::now();
-  std::chrono::duration<double> diff = e - s;
-  std::cout << "search time: " << diff.count() << "\n";
+  auto microseconds = std::chrono::duration_cast<std::chrono::microseconds>(e - s).count();
+  std::cout << "search time: " << microseconds << "\n";
 
   save_result(argv[6], res);
 
